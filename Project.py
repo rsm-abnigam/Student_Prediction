@@ -246,3 +246,93 @@ plt.show()
 from sklearn.metrics import mean_squared_error
 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 print(f"Root Mean Squared Error (RMSE): {rmse:.2f}")
+
+
+
+
+
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import pdfkit
+
+# Load Data
+@st.cache_data
+def load_data():
+    # Example dataset
+    data = {
+        "Student": ["Alice", "Bob", "Charlie", "David"],
+        "Hours_Studied": [5, 8, 3, 6],
+        "Attendance": [90, 85, 78, 88],
+        "Previous_Scores": [75, 82, 60, 70],
+        "Exam_Score": [78, 88, 68, 75],
+    }
+    return pd.DataFrame(data)
+
+df = load_data()
+
+# Dashboard Layout
+st.title("Interactive Dashboard: Predicting Student Performance")
+st.write("Explore and analyze student performance data.")
+
+# Filters
+st.sidebar.header("Filters")
+min_score = st.sidebar.slider("Minimum Exam Score", 0, 100, 60)
+filtered_data = df[df["Exam_Score"] >= min_score]
+
+# Visualizations
+st.subheader("Filtered Data")
+st.write(filtered_data)
+
+# Scatter Plot: Hours Studied vs Exam Score
+st.subheader("Hours Studied vs. Exam Score")
+fig = px.scatter(filtered_data, x="Hours_Studied", y="Exam_Score", color="Student", size="Attendance")
+st.plotly_chart(fig)
+
+# Exclude non-numeric columns
+numeric_df = df.select_dtypes(include=["number"])
+
+# Compute correlation matrix
+corr = numeric_df.corr()
+
+# Plot heatmap
+st.subheader("Correlation Heatmap")
+fig_corr = px.imshow(corr, text_auto=True, color_continuous_scale="viridis", title="Correlation Heatmap")
+st.plotly_chart(fig_corr)
+
+
+# Generate Report
+st.subheader("Generate Report")
+
+def generate_html_report(filtered_data):
+    html_content = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            table {{ width: 100%; border-collapse: collapse; }}
+            th, td {{ border: 1px solid black; padding: 8px; text-align: left; }}
+            th {{ background-color: #f2f2f2; }}
+        </style>
+    </head>
+    <body>
+        <h1>Student Performance Report</h1>
+        <h2>Summary</h2>
+        <p>Total Students: {len(filtered_data)}</p>
+        <h2>Filtered Data</h2>
+        {filtered_data.to_html(index=False)}
+    </body>
+    </html>
+    """
+    return html_content
+
+if st.button("Generate Report"):
+    html_report = generate_html_report(filtered_data)
+    with open("report.html", "w") as f:
+        f.write(html_report)
+
+    pdfkit.from_file("report.html", "Student_Performance_Report.pdf")
+    st.success("Report generated successfully!")
+    with open("Student_Performance_Report.pdf", "rb") as f:
+        st.download_button("Download Report", f, file_name="Student_Performance_Report.pdf")
+
